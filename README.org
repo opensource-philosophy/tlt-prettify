@@ -1,0 +1,129 @@
+* tlt-prettify
+TL;DR: =tlt-prettify= is an Emacs package written in an effort to make writing logic in LaTeX-, Beamer- and org-mode more comfortable. See the =.gif= images below to get a first impression.
+
+In summary, =tlt-prettify= supports the prettification of =LaTeX= commands that, when compiling, result in symbols commonly used in mathematics or logic, as well as those commands which print text in a certain color. This behavior is supported both for =.text= and =.org= documents. On top of that, =tlt-prettify= introduces a machinery to convert back and forth strings containing =LaTeX= commands and strings containing Unicode symbols.
+* Installation
+** Automatic Installation (via quelpa)
+The package can be installed using [[https://github.com/quelpa/quelpa][quelpa]] like this:
+
+#+BEGIN_SRC emacs-lisp
+(quelpa '(tlt-prettify :fetcher github :repo "opensource-philosophy/tlt-prettify"))
+#+END_SRC
+** Manual Installation
+To install =tlt-prettify= manually, download/clone the repository to a directory of your choice and add this directory to your =load-path=. Lastly, autoload the commands you want to use:
+
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'load-path "/path/to/tlt-prettify-dir")
+(autoload 'tlt-prettify "tlt-prettify" nil t)
+(autoload 'tlt-copy-region-unicode-to-LaTeX  "tlt-prettify" nil t)
+(autoload 'tlt-paste-region-unicode-to-LaTeX "tlt-prettify" nil t)
+(autoload 'tlt-copy-region-LaTeX-to-unicode  "tlt-prettify" nil t)
+(autoload 'tlt-paste-region-LaTeX-to-unicode "tlt-prettify" nil t)
+#+END_SRC
+
+* Features
+** =LaTeX= Command Prettification
+[[https://github.com/opensource-philosophy/the-logicians-toolbox/blob/main/tlt-prettify/GIFs/formulas.gif]]
+
+The most basic functionality =tlt-prettify= provides is that =LaTeX= commands which produce special characters -- and especially those which mathematicians and logicians commonly use for writing formulas -- are treated /as if they actually were/ these special characters. To be exact, the Unicode symbols these commands would print if they were compiled with =LaTeX= are shown instead of the commands themselves, and a single keystroke deletes them. For example, instead of =\forall=, =∀= is displayed, and hitting =backspace= right before it deletes the whole =\forall=. =tlt-prettify= offers support both for =.tex= and =.org= documents.
+*** Prettification for =.tex= documents
+If you happen to write your documents or =beamer= presentations directly in a =.tex= file, =tlt-prettify-TeX-mode= is the minor-mode you will need to activate in order for the prettification to happen. This can be done either manually or automatically. For the former, run the same-named interactive command, i.e. type =M-x tlt-prettify-TeX-mode RET=. For the latter, add the following line to your Emacs configuration file:
+#+begin_src emacs-lisp
+(add-hook 'TeX-update-style-hook #'tlt-prettify-TeX-mode)
+#+end_src
+*** Prettiication for =.org= documents
+Similar functionality can be turned on for =.org= documents, which are commonly used to export into =.tex= documents. Here, too, both manual and automatic activation is possible; the former with =M-x tlt-prettify-org-mode RET=, the latter by adding
+#+begin_src emacs-lisp
+(add-hook 'org-mode-hook #'tlt-prettify-org-mode)
+#+end_src
+In addition to the prettification of =LaTeX= commands, inline =LaTeX= and =beamer= code is displayed colored as well. By default, =@@latex:foo@@= and =@@beamer:foo@@= are both displayed as =foo= colored in =turquoise2=.
+** =LaTeX= ⇔ Unicode conversion
+Next to the prettification machinery, =tlt-prettify= allows for conversion form =LaTeX= macros to their Unicode counterparts and vice versa. Specifically, it provides the following interactive commands:
+
+- ~tlt-copy-region-unicode-to-LaTeX~
+- ~tlt-copy-region-LaTeX-to-unicode~
+- ~tlt-paste-region-unicode-to-LaTeX~
+- ~tlt-paste-region-LaTeX-to-unicode~
+
+Let =TEXT= be the text to be converted and =CONV(TEXT)= the result of applying one of the conversion functions above. As a rule of thumb, note:
+
+1. Use =tlt-copy-*= commands when =TEXT= is in an Emacs buffer and =CONV(TEXT)= is intended for use in an external program.
+2. Use =tlt-paste-*= commands if =TEXT= is in an external program and =CONV(TEXT)= is intended for use in an Emacs buffer.
+3. Use the commands indiscriminately if both =TEXT= and =CONV(TEXT)= are to be used in an Emacs buffer.
+
+A word of caution to =UNIX= users: If Emacs is closed, the currently copied text will not be available anymore, which, if not known, can result in data loss. To change this behavior, you can install the package system-package =clipit=, which stores the clipboard contents in a text file to make it available even if the programs you copied from are closed. Installation instructions are not well-documented on the [[https://github.com/CristianHenzel/ClipIt/][GitHub page]], but the package is available for all major package managers. To install it using =pacman=, for example, run
+#+BEGIN_SRC bash
+sudo pacman -S clipit
+#+END_SRC
+in the shell console of your choice. Also make sure to add =clipit -d= to your autostart. This way, the functionality is turned on right after system start.
+*** Copy-commands
+If you select a region and run ~tlt-copy-region-*~, the respective conversion will happen and the converted text will be put to the =kill-ring= (i.e., the Emacs-internal clipboard). For instance, selecting =∀x∃y= and running =M-x tlt-copy-region-unicode-to-LaTeX= results in =\forall x \exists y= being copied to your clipboard. The recently copied string may, of course, be used in other programs as well. 
+
+To clarify this point, let us have a look at an example. if you would like to send a formula from one of your papers via mail, open the respective =.tex= file, select that formula and run =tlt-copy-region-LaTeX-to-unicode=. Now, the Unicode analogon of your =LaTeX= formula is copied to your clipboard. Go back to your mail application and string just obtained into the mail using =Ctrl + v=. 
+*** Paste-commands
+On the other hand, if you run ~tlt-paste-region-*~ on a selected region, the string most recently stored in the clipboard is converted and inserted at point. 
+
+For instance, if we wished to copy a rather long formula like =∀x ◻α[x] → ◻∀x α[x]= from a presentation to our =.tex= file, we would need a conversion from Unicode to LaTeX. To do that, we would copy the unicode formula from your presentation, go into Emacs and type =M-x tlt-paste-region-unicode-to-LaTeX RET=. This would result in =\forall x \Box \alpha [x] \to \Box \forall x \alpha [x]= to be inserted at point.
+
+** Deleting characters and =LaTeX= macros
+Another feature that =tlt-prettify= provides is the possibility to remove the whole =LaTeX= macro when you press =Shift-Backspace= or
+=Shift-Delete=.
+
+To spell this out, let =|= indicate the current position of the [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Point.html][point]] and =_= indicate a whitespace character (in this case, a space). Let us further assume this situation: =text \macro|=. Pressing =Shift-Backspace= now removes =\foo= so that only =some_= is left. If you press =Shift-Backspace= again, you get =some= (only the space is removed since there is no =LaTeX= macro to delete backwards).
+
+Similarly, if you press =Backspace= or =Delete=, then either a
+prettified =LaTeX= macro (that is shown as a Unicode symbol) or a
+single character is deleted.  If you don't like this behavior, you can disable it with the following setting:
+
+#+begin_src emacs-lisp
+(setq tlt-enable-delete-LaTeX-macros nil)
+#+end_src
+
+This will make =Backspace= and =Delete= remove a single character. In analogy to the above example, you would end up with =text \macr|= and  =text \mac|=, respectively.
+
+** Color command prettification
+[[https://github.com/opensource-philosophy/the-logicians-toolbox/blob/main/tlt-prettify/GIFs/colors.gif]]
+
+By default, =tlt-prettify= displays =\COLOR{TEXT}= and
+=\textcolor{COLOR}{TEXT}= as =TEXT= highlighted with COLOR. For example, =\green{foo}= and =\textcolor{green}{foo}= will both be displayed as =foo= colored green.
+
+=tlt-prettify= support the most important colors out of the box. Additional colors to be regarded for prettification can be specified by manipulating the variable ~tlt-color-commands~. To add these custom colors, you can =append= them to the existing list:
+
+#+begin_src emacs-lisp
+  (append tlt-color-commands '(
+                               ("babig" "0,0,50")
+                               ("bebig" "75,125,175")
+                               ;; further custom colors ;;
+                               ))
+#+end_src
+
+An additional color is specified by a string of the form =("COLOR" "R,G,B")=, where =COLOR= is the name of the color you define and =R=, =G= and =B= are integers ranging between 0 and 255, specifying its red, green and blue values, respectively. For example, appending a list containing =("babig" "0,0,50")= would result in both =\babig{TEXT}= and =\textcolor{babig}{TEXT}= being displayed as =TEXT= colored in navy blue.
+
+If you wish to disable this feature, you can do so by adding the following piece of code to your configuration file:
+#+begin_src emacs-lisp
+(setq tlt-enable-colors nil)
+#+end_src
+
+* An example configuration using =use-package=
+Below, you will find a very basic configuration of =tlt-prettify= using =use-package=.
+#+BEGIN_SRC elisp :exports code
+  (use-package tlt-prettify
+    :hook ((org-mode . tlt-prettify-org-mode) 
+           (TeX-mode . tlt-prettiy-TeX-mode))
+    :config
+    (append tlt-color-commands '(("anthracite" "41,42,45")
+                                 ("froggreen" "61,212,37"))))
+#+END_SRC
+This configuration automatically enables =tlt-prettify-org-mode= in =.org= documents and =tlt-prettify-TeX-mode= in =.tex= documents. It also adds two custom colors: =anthracite= and =froggreen=.
+* History
+Originally, =tlt-prettify= was meant to be an extension of [[https://github.com/zk-phi/magic-latex-buffer][magic-latex-buffer]] written by [[https://github.com/zk-phi/][zk-phi]]. Over time, though, a great deal of other features was added, including, but not limited to ...
+
+- more ways to adjust the package to one's needs
+- a greater range of symbols relevant to logicians and mathematicians (for example, =\mathbb= and =\mathfrak= commands are supported)
+- more sophisticated prettification (e.g., =\neg \alpha= is prettified as =¬α= instead of =¬ α=)
+- the prettification of =LaTeX= color commands.
+- the possibility to delete prettified =LaTeX= commands with a single key stroke
+- commands to convert Unicode symbols to =LaTeX= commands and vice versa
+- an analogous and more resource-efficient minor-mode for =.org= files.
+
+For this reason, and since =magic-latex-buffer= does not seem to be maintained anymore, =tlt-prettify= has become a package of its own.
